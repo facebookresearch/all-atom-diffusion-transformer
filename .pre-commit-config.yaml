@@ -38,19 +38,19 @@ repos:
       - id: pyupgrade
         args: [--py38-plus]
 
-  # python docstring formatting
-  - repo: https://github.com/myint/docformatter
-    rev: v1.7.4
-    hooks:
-      - id: docformatter
-        args:
-          [
-            --in-place,
-            --wrap-summaries=99,
-            --wrap-descriptions=99,
-            --style=sphinx,
-            --black,
-          ]
+  # # python docstring formatting
+  # - repo: https://github.com/myint/docformatter
+  #   rev: v1.7.4
+  #   hooks:
+  #     - id: docformatter
+  #       args:
+  #         [
+  #           --in-place,
+  #           --wrap-summaries=99,
+  #           --wrap-descriptions=99,
+  #           --style=sphinx,
+  #           --black,
+  #         ]
 
   # # python docstring coverage checking
   # - repo: https://github.com/econchick/interrogate

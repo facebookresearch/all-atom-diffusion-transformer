@@ -15,7 +15,7 @@ mofchecker==0.9.6
 numba==0.61.0
 numpy==2.2.2
 omegaconf==2.3.0
-openbabel==3.1.1.1
+openbabel==3.1.1
 orjson==3.10.15
 p_tqdm==1.4.1
 pandas==2.2.3
