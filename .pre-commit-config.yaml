@@ -97,24 +97,24 @@ repos:
   #       types: [yaml]
   #       exclude: "environment.yaml"
 
-  # shell scripts linter
-  - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.9.0.2
-    hooks:
-      - id: shellcheck
+  # # shell scripts linter
+  # - repo: https://github.com/shellcheck-py/shellcheck-py
+  #   rev: v0.9.0.2
+  #   hooks:
+  #     - id: shellcheck
 
-  # md formatting
-  - repo: https://github.com/executablebooks/mdformat
-    rev: 0.7.16
-    hooks:
-      - id: mdformat
-        args: ["--number"]
-        additional_dependencies:
-          - mdformat-gfm
-          - mdformat-tables
-          - mdformat_frontmatter
-          # - mdformat-toc
-          # - mdformat-black
+  # # md formatting
+  # - repo: https://github.com/executablebooks/mdformat
+  #   rev: 0.7.16
+  #   hooks:
+  #     - id: mdformat
+  #       args: ["--number"]
+  #       additional_dependencies:
+  #         - mdformat-gfm
+  #         - mdformat-tables
+  #         - mdformat_frontmatter
+  #         # - mdformat-toc
+  #         # - mdformat-black
 
   # # word spelling linter
   # - repo: https://github.com/codespell-project/codespell
