@@ -55,7 +55,7 @@ class QMOF150(InMemoryDataset):
 
     @property
     def raw_file_names(self) -> List[str]:
-        return ["skip.txt"]
+        return ["relaxed_structures"]
 
     @property
     def processed_file_names(self) -> List[str]:
@@ -68,7 +68,7 @@ class QMOF150(InMemoryDataset):
         if os.path.exists(os.path.join(self.root, "all_ori.pt")):
             cached_data = torch.load(os.path.join(self.root, "all_ori.pt"))
         else:
-            data_dir = os.path.join(self.root, "relaxed_structures")
+            data_dir = os.path.join(self.root, "raw/relaxed_structures")
             filenames = os.listdir(data_dir)
             cached_data = []
             t = tqdm(filenames)
