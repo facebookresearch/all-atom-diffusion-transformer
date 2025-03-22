@@ -10,10 +10,11 @@ import wandb
 from pymatgen.analysis.structure_matcher import StructureMatcher
 from rdkit import Chem
 from rdkit.Chem import Draw
+from tqdm import tqdm
+
 from src.eval.crystal import Crystal
 from src.tools.ase_notebook import AseView
 from src.utils import joblib_map
-from tqdm import tqdm
 
 ase_view = AseView(
     rotations="45x,45y,45z",

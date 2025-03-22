@@ -33,7 +33,7 @@ def get_index_embedding(indices, emb_dim, max_len=2048):
 
 class TransformerEncoder(nn.Module):
     """Transformer encoder as part of standard Transformer-based VAEs.
-    
+
     Args:
         max_num_elements: Maximum number of elements in the dataset
         d_model: Dimension of the model

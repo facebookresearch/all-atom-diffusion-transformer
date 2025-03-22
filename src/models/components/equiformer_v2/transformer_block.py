@@ -7,6 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch_geometric
+
 from src.models.components.equiformer_v2.activation import (
     GateActivation,
     S2Activation,

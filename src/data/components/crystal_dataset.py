@@ -9,9 +9,10 @@ import omegaconf
 import pandas as pd
 import torch
 from omegaconf import ValueNode
-from src.data.components.preprocessing_utils import preprocess
 from torch.utils.data import Dataset
 from torch_geometric.data import Data
+
+from src.data.components.preprocessing_utils import preprocess
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 

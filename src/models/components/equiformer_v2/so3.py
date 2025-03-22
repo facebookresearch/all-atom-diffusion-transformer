@@ -23,8 +23,9 @@ try:
 except ImportError:
     pass
 
-from src.models.components.equiformer_v2.wigner import wigner_D
 from torch.nn import Linear
+
+from src.models.components.equiformer_v2.wigner import wigner_D
 
 
 class CoefficientMappingModule(torch.nn.Module):

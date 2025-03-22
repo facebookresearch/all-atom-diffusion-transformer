@@ -4,6 +4,7 @@ import copy
 
 import torch
 import torch.nn as nn
+
 from src.models.components.equiformer_v2.radial_function import RadialFunction
 from src.models.components.equiformer_v2.so3 import SO3_Embedding
 

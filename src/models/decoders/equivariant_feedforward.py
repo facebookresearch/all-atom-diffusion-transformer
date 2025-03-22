@@ -4,6 +4,9 @@ import math
 from typing import Any, Dict, Tuple
 
 import torch
+from torch import nn
+from torch_scatter import scatter
+
 from src.models.components.equiformer_v2.layer_norm import (
     EquivariantLayerNormArray,
     EquivariantLayerNormArraySphericalHarmonics,
@@ -18,13 +21,11 @@ from src.models.components.equiformer_v2.so3 import (
     SO3_LinearV2,
 )
 from src.models.components.equiformer_v2.transformer_block import FeedForwardNetwork
-from torch import nn
-from torch_scatter import scatter
 
 
 class FeedForwardDecoder(nn.Module):
     """Equivariant feedforward decoder as part of Equiformer-based VAEs.
-    
+
     See src/models/encoders/equiformer.py for documentation.
     """
 

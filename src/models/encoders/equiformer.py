@@ -5,6 +5,10 @@ import math
 import numpy as np
 import torch
 from e3nn import o3
+from torch import nn
+from torch_geometric.nn import radius_graph
+from torch_scatter import scatter
+
 from src.models.components.equiformer_v2.edge_rot_mat import init_edge_rot_mat
 from src.models.components.equiformer_v2.gaussian_rbf import GaussianRadialBasisLayer
 from src.models.components.equiformer_v2.input_block import EdgeDegreeEmbedding
@@ -34,9 +38,6 @@ from src.models.components.radius_graph_utils import (
     get_pbc_distances,
     radius_graph_pbc,
 )
-from torch import nn
-from torch_geometric.nn import radius_graph
-from torch_scatter import scatter
 
 
 class GaussianSmearing(torch.nn.Module):

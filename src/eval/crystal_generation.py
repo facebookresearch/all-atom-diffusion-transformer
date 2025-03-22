@@ -10,10 +10,11 @@ import torch
 import wandb
 from pymatgen.analysis.structure_matcher import StructureMatcher
 from pymatgen.core.structure import Structure
+from tqdm import tqdm
+
 from src.eval.crystal import Crystal
 from src.tools.ase_notebook import AseView
 from src.utils import joblib_map, pylogger
-from tqdm import tqdm
 
 warnings.filterwarnings("ignore", category=UserWarning)
 

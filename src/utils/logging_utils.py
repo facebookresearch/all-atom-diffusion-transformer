@@ -5,6 +5,7 @@ from typing import Any, Dict
 import hydra
 from lightning_utilities.core.rank_zero import rank_zero_only
 from omegaconf import OmegaConf
+
 from src.utils import pylogger
 
 log = pylogger.RankedLogger(__name__, rank_zero_only=True)

@@ -13,7 +13,7 @@ datamodule:
       root: ${paths.data_dir}/qm9
       removeHs: false  # only retain heavy atoms
       proportion: 0.0
-    
+
     qmof150:
       _target_: src.data.components.qmof150_dataset.QMOF150
       root: ${paths.data_dir}/qmof

@@ -5,9 +5,10 @@ import math
 
 import torch
 import torch.nn as nn
+from torch.nn import Linear
+
 from src.models.components.equiformer_v2.radial_function import RadialFunction
 from src.models.components.equiformer_v2.so3 import SO3_Embedding
-from torch.nn import Linear
 
 
 class SO2_m_Convolution(torch.nn.Module):

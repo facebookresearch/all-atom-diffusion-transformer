@@ -33,7 +33,7 @@ def get_index_embedding(indices, emb_dim, max_len=2048):
 
 class TransformerDecoder(nn.Module):
     """Transformer decoder as part of pure Transformer-based VAEs.
-    
+
     See src/models/encoders/transformer.py for documentation.
     """
 

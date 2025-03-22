@@ -200,7 +200,7 @@ class FinalLayer(nn.Module):
 
 class DiT(nn.Module):
     """Diffusion model with a Transformer backbone.
-    
+
     Args:
         d_x (int): Input dimension
         d_model (int): Model dimension
