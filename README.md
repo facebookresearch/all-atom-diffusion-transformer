@@ -50,9 +50,9 @@ Our codebase is built upon the [lightning-hydra template](https://github.com/ash
 **Datasets:**
 
 All datasets will be downloaded and processed automatically when running the code for the first time via PyG/HuggingFace:
-- Small molecules: [QM9](https://pytorch-geometric.readthedocs.io/en/latest/generated/torch_geometric.datasets.QM9.html)
-- Inorganic crystals: [MP20](https://huggingface.co/datasets/chaitjo/MP20_ADiT) (Also includes processed files)
-- Metal-organic frameworks: [QMOF150](https://huggingface.co/datasets/chaitjo/QMOF150_ADiT) (Also includes processed files)
+- Small molecules: [QM9 on PyG](https://pytorch-geometric.readthedocs.io/en/latest/generated/torch_geometric.datasets.QM9.html)
+- Inorganic crystals: [MP20 on HuggingFace](https://huggingface.co/datasets/chaitjo/MP20_ADiT) (includes processed files)
+- Metal-organic frameworks: [QMOF150 on HuggingFace](https://huggingface.co/datasets/chaitjo/QMOF150_ADiT) (includes processed files)
 
 Downloading and processing all three datasets can take around 1/2 hour, but only needs to happen one time.
 
