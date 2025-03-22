@@ -33,7 +33,9 @@ pip install torch_scatter torch_cluster -f https://data.pyg.org/whl/torch-2.3.0+
 
 # install other libraries (see requirements.txt for versions)
 pip install lightning==2.4.0 hydra-core==1.* hydra-colorlog
-mamba install ase==3.23.0 pymatgen==2024.7.18 matminer==0.9.2 smact==2.6 openbabel==3.1.1.1 jupyterlab pandas seaborn joblib yaml -c conda-forge
+mamba install ase==3.23.0  # individually installed due to dependency conflict
+mamba install matminer==0.9.2  # individually installed due to dependency conflict
+mamba install smact==2.6 openbabel==3.1.1.1 jupyterlab pandas seaborn joblib yaml -c conda-forge
 pip install pyxtal==0.6.7 mofchecker==0.9.6 rdkit==2024.3.5 e3nn==0.5.1 posebusters==0.3.1 download==0.3.5 ipdb wandb rootutils rich pathos p-tqdm einops svgwrite cairosvg reportlab lmdb torchdiffeq huggingface_hub
 
 # install pre-commit hooks (optional)
@@ -43,15 +45,24 @@ pre-commit install
 
 ## Usage
 
-**Training and evaluating models:**
-
 Our codebase is built upon the [lightning-hydra template](https://github.com/ashleve/lightning-hydra-template/), who's README provides a general overview of usage.
+
+**Datasets**
+
+All datasets will be downloaded and processed automatically when running the code for the first time via PyG/HuggingFace:
+- Small molecules: [QM9](https://pytorch-geometric.readthedocs.io/en/latest/generated/torch_geometric.datasets.QM9.html)
+- Inorganic crystals: [MP20](https://huggingface.co/datasets/chaitjo/MP20_ADiT)
+- Metal-organic frameworks: [QMOF150](https://huggingface.co/datasets/chaitjo/QMOF150_ADiT)
+
+This can take up to 1 hour, but only needs to happen one time.
+
+**Training and evaluating models:**
 
 Running training scripts for VAEs and DiTs will train the model as well as compute evaluation metrics during validation.
 Everything is logged to W&B and CIF/PDB files can also be optionally saved for visualization over the course of training.
 All our experiments were performed on V100 GPUs. We generally trained all models on 4 or 8 GPUs, and train till convergence or if we hit a time limit of 3 days per job on a SLURM cluster.
 
-**Step 0:** Set paths to logging directories in `configs/paths/default.yaml` and wandb entity/project in `configs/logging/wandb.yaml`.
+**Step 0:** Set paths to data and logging directories in `configs/paths/default.yaml` and wandb entity/project in `configs/logging/wandb.yaml`.
 
 **Step 1:** Train a VAE model; example script: `slurm/train_ddp_vae.sh`. Key hyperparameters to be specified in `configs/autoencoder_module/vae.yaml` include:
 
@@ -108,6 +119,8 @@ Note that evaluation is best done via wandb sweep (template: `configs/sweep/eval
 ```
 
 ## Citation
+
+ArXiv link: [*"All-atom Diffusion Transformers: Unified generative modelling of molecules and materials"*](https://www.arxiv.org/abs/2503.03965)
 
 ```
 @article{joshi2025allatom,
