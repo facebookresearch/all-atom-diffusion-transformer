@@ -14,17 +14,18 @@ import wandb
 from lightning import LightningModule
 from lightning.pytorch.loggers import WandbLogger
 from omegaconf import DictConfig
+from torch.nn import ModuleDict
+from torch_geometric.data import Data
+from torch_geometric.utils import to_dense_batch
+from torchmetrics import MeanMetric
+from tqdm import tqdm
+
 from src.eval.crystal_generation import CrystalGenerationEvaluator
 from src.eval.mof_generation import MOFGenerationEvaluator
 from src.eval.molecule_generation import MoleculeGenerationEvaluator
 from src.models.components.kabsch_utils import random_rotation_matrix
 from src.models.vae_module import VariationalAutoencoderLitModule
 from src.utils import pylogger
-from torch.nn import ModuleDict
-from torch_geometric.data import Data
-from torch_geometric.utils import to_dense_batch
-from torchmetrics import MeanMetric
-from tqdm import tqdm
 
 log = pylogger.RankedLogger(__name__)
 
@@ -35,9 +36,9 @@ IDX_TO_DATASET = {
     2: "qmof150",
 }
 DATASET_TO_IDX = {
-    "mp20": 0,
-    "qm9": 1,
-    "qmof150": 2,  # 0 --> indicates periodic/crystal
+    "mp20": 0,  # periodic
+    "qm9": 1,  # non-periodic
+    "qmof150": 0,  # periodic
 }
 
 
