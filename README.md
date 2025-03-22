@@ -1,6 +1,6 @@
 # All-atom Diffusion Transformers
 
-Code for the paper [*"All-atom Diffusion Transformers: Unified generative modelling of molecules and materials"*](https://www.arxiv.org/abs/2503.03965), by [Chaitanya K. Joshi](https://www.chaitjo.com/), [Xiang Fu](https://xiangfu.co/), [Yi-Lun Liao](https://www.linkedin.com/in/yilunliao), [Vahe Gharakhanyan](https://gvahe.github.io/), [Benjamin Kurt Miller](https://www.mathben.com/), [Anuroop Sriram*](https://anuroopsriram.com/), and [Zachary W. Ulissi*](https://zulissi.github.io/) from FAIR Chemistry at Meta (* Joint last author). 
+Code for the paper [*"All-atom Diffusion Transformers: Unified generative modelling of molecules and materials"*](https://www.arxiv.org/abs/2503.03965), by [Chaitanya K. Joshi](https://www.chaitjo.com/), [Xiang Fu](https://xiangfu.co/), [Yi-Lun Liao](https://www.linkedin.com/in/yilunliao), [Vahe Gharakhanyan](https://gvahe.github.io/), [Benjamin Kurt Miller](https://www.mathben.com/), [Anuroop Sriram*](https://anuroopsriram.com/), and [Zachary W. Ulissi*](https://zulissi.github.io/) from FAIR Chemistry at Meta (* Joint last author).
 
 All-atom Diffusion Transformers (ADiTs) jointly generate both periodic materials and non-periodic molecular systems using a unified latent diffusion framework:
 - An autoencoder maps a unified, all-atom representations of molecules and materials to a shared latent embedding space; and
@@ -34,7 +34,7 @@ pip install torch_scatter torch_cluster -f https://data.pyg.org/whl/torch-2.3.0+
 # install other libraries (see requirements.txt for versions)
 pip install lightning==2.4.0 hydra-core==1.* hydra-colorlog
 mamba install ase==3.23.0 pymatgen==2024.7.18 matminer==0.9.2 smact==2.6 openbabel==3.1.1.1 jupyterlab pandas seaborn joblib yaml -c conda-forge
-pip install pyxtal==0.6.7 mofchecker==0.9.6 rdkit==2024.3.5 e3nn==0.5.1 posebusters==0.3.1 download==0.3.5 ipdb wandb rootutils rich pathos p-tqdm einops svgwrite cairosvg reportlab lmdb torchdiffeq
+pip install pyxtal==0.6.7 mofchecker==0.9.6 rdkit==2024.3.5 e3nn==0.5.1 posebusters==0.3.1 download==0.3.5 ipdb wandb rootutils rich pathos p-tqdm einops svgwrite cairosvg reportlab lmdb torchdiffeq huggingface_hub
 
 # install pre-commit hooks (optional)
 pip install pre-commit

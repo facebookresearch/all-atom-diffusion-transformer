@@ -11,6 +11,7 @@ from torch_geometric.data import Data, InMemoryDataset
 from src.data.components.preprocessing_utils import preprocess
 
 warnings.simplefilter("ignore", UserWarning)
+warnings.simplefilter("ignore", DeprecationWarning)
 
 
 class MP20(InMemoryDataset):
@@ -60,13 +61,18 @@ class MP20(InMemoryDataset):
         return ["mp20.pt"]
 
     def download(self) -> None:
-        raise NotImplementedError(
-            f"Manually download the dataset and place it at {self.root}/raw."
+        from huggingface_hub import hf_hub_download
+
+        hf_hub_download(
+            repo_id="chaitjo/MP20_ADiT",
+            filename="raw/all.csv",
+            repo_type="dataset",
+            local_dir=self.root,
         )
 
     def process(self) -> None:
-        if os.path.exists(os.path.join(self.root, "all_ori.pt")):
-            cached_data = torch.load(os.path.join(self.root, "all_ori.pt"))
+        if os.path.exists(os.path.join(self.root, "raw/all.pt")):
+            cached_data = torch.load(os.path.join(self.root, "raw/all.pt"))
         else:
             cached_data = preprocess(
                 os.path.join(self.root, "raw/all.csv"),
@@ -78,7 +84,7 @@ class MP20(InMemoryDataset):
                 tol=0.1,
                 num_workers=32,
             )
-            torch.save(cached_data, os.path.join(self.root, "all_ori.pt"))
+            torch.save(cached_data, os.path.join(self.root, "raw/all.pt"))
 
         data_list = []
         for data_dict in cached_data:
