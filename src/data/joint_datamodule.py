@@ -171,6 +171,16 @@ class JointDataModule(LightningDataModule):
         self.qmof150_train_dataset = qmof150_dataset[2048:]
         self.qmof150_val_dataset = qmof150_dataset[:1024]
         self.qmof150_test_dataset = qmof150_dataset[1024:2048]
+        # retain subset of dataset; can be used to train on only one dataset, too
+        self.qmof150_train_dataset = self.qmof150_train_dataset[
+            : int(len(self.qmof150_train_dataset) * self.hparams.datasets.qmof150.proportion)
+        ]
+        self.qmof150_val_dataset = self.qmof150_val_dataset[
+            : int(len(self.qmof150_val_dataset) * self.hparams.datasets.qmof150.proportion)
+        ]
+        self.qmof150_test_dataset = self.qmof150_test_dataset[
+            : int(len(self.qmof150_test_dataset) * self.hparams.datasets.qmof150.proportion)
+        ]
 
         if stage is None or stage in ["fit", "validate"]:
             self.train_dataset = ConcatDataset(
