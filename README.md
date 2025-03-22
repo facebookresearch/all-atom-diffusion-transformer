@@ -34,7 +34,7 @@ pip install torch_scatter torch_cluster -f https://data.pyg.org/whl/torch-2.3.0+
 # install other libraries (see requirements.txt for versions)
 pip install lightning==2.4.0 hydra-core==1.* hydra-colorlog
 mamba install ase==3.23.0 pymatgen==2024.7.18 matminer==0.9.2 smact==2.6 openbabel==3.1.1.1 jupyterlab pandas seaborn joblib yaml -c conda-forge
-pip install pyxtal==0.6.7 mofchecker==0.9.6 rdkitrdkit==2024.3.5 e3nn==0.5.1 posebusters==0.3.1 download==0.3.5 ipdb wandb rootutils rich pathos p-tqdm einops svgwrite cairosvg reportlab lmdb torchdiffeq
+pip install pyxtal==0.6.7 mofchecker==0.9.6 rdkit==2024.3.5 e3nn==0.5.1 posebusters==0.3.1 download==0.3.5 ipdb wandb rootutils rich pathos p-tqdm einops svgwrite cairosvg reportlab lmdb torchdiffeq
 
 # install pre-commit hooks (optional)
 pre-commit install
