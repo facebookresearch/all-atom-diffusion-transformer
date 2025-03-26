@@ -3,7 +3,7 @@
 # specify here default configuration
 # order of defaults determines the order in which configs override each other
 defaults:
-  - data: joint  # joint / qm9_only / mp20_only
+  - data: qm9_only  # joint / qm9_only / mp20_only
   - encoder: transformer
   - decoder: transformer
   - autoencoder_module: vae
