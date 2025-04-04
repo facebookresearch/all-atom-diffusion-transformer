@@ -47,3 +47,13 @@ scheduler_frequency: ${trainer.check_val_every_n_epoch}
 
 # compile model for faster training with pytorch 2.0
 compile: false
+
+datasets:
+  mp20:
+    proportion: ${data.datamodule.datasets.mp20.proportion}
+
+  qm9:
+    proportion: ${data.datamodule.datasets.qm9.proportion} 
+
+  qmof150:
+    proportion: ${data.datamodule.datasets.qmof150.proportion} 
