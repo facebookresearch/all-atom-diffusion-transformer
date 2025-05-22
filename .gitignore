@@ -9,6 +9,12 @@ __pycache__/
 # C extensions
 *.so
 
+# custom
+/slurm/train_ldm.sh
+/slurm/train_vae.sh
+/slurm/test.sh
+test.ipynb
+
 # Distribution / packaging
 .Python
 build/

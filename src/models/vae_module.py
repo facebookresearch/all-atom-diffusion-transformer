@@ -28,11 +28,6 @@ from src.utils import pylogger
 log = pylogger.RankedLogger(__name__)
 
 
-IDX_TO_DATASET = {
-    0: "mp20",
-    1: "qm9",
-    2: "qmof150",
-}
 DATASET_TO_IDX = {
     "mp20": 0,  # periodic
     "qm9": 1,  # non-periodic
@@ -121,6 +116,7 @@ class VariationalAutoencoderLitModule(LightningModule):
 
     def __init__(
         self,
+        datasets: DictConfig,
         encoder: torch.nn.Module,
         decoder: torch.nn.Module,
         latent_dim: int,
@@ -174,18 +170,6 @@ class VariationalAutoencoderLitModule(LightningModule):
             requires_grad=False,
         )
 
-        # evaluator objects for computing metrics
-        self.val_reconstruction_evaluators = {
-            "mp20": CrystalReconstructionEvaluator(),
-            "qm9": MoleculeReconstructionEvaluator(),
-            "qmof150": MOFReconstructionEvaluator(),
-        }
-        self.test_reconstruction_evaluators = {
-            "mp20": CrystalReconstructionEvaluator(),
-            "qm9": MoleculeReconstructionEvaluator(),
-            "qmof150": MOFReconstructionEvaluator(),
-        }
-
         # metric objects for calculating and averaging across batches
         self.train_metrics = ModuleDict(
             {
@@ -205,9 +189,13 @@ class VariationalAutoencoderLitModule(LightningModule):
                 "dataset_idx": MeanMetric(),
             }
         )
-        self.val_metrics = ModuleDict(
-            {
-                "mp20": ModuleDict(
+
+        # evaluator objects for computing metrics
+        self.val_reconstruction_evaluators = {}
+        self.val_metrics = ModuleDict()
+        if self.hparams.datasets.mp20.proportion>0:
+            self.val_reconstruction_evaluators['mp20'] = CrystalReconstructionEvaluator()
+            self.val_metrics['mp20'] = ModuleDict(
                     {
                         "loss": MeanMetric(),
                         "loss_atom_types": MeanMetric(),
@@ -225,8 +213,11 @@ class VariationalAutoencoderLitModule(LightningModule):
                         "match_rate": MeanMetric(),
                         "rms_dist": MeanMetric(),
                     }
-                ),
-                "qm9": ModuleDict(
+                )
+
+        if self.hparams.datasets.qm9.proportion>0:
+            self.val_reconstruction_evaluators['qm9'] = MoleculeReconstructionEvaluator()
+            self.val_metrics['qm9'] = ModuleDict(
                     {
                         "loss": MeanMetric(),
                         "loss_atom_types": MeanMetric(),
@@ -244,8 +235,11 @@ class VariationalAutoencoderLitModule(LightningModule):
                         "match_rate": MeanMetric(),
                         "rms_dist": MeanMetric(),
                     }
-                ),
-                "qmof150": ModuleDict(
+                )
+
+        if self.hparams.datasets.qmof150.proportion>0:
+            self.val_reconstruction_evaluators['qmof150'] = MOFReconstructionEvaluator()
+            self.val_metrics['qmof150'] = ModuleDict(
                     {
                         "loss": MeanMetric(),
                         "loss_atom_types": MeanMetric(),
@@ -263,10 +257,20 @@ class VariationalAutoencoderLitModule(LightningModule):
                         "match_rate": MeanMetric(),
                         "rms_dist": MeanMetric(),
                     }
-                ),
-            }
-        )
+                )
+
+        self.test_reconstruction_evaluators = copy.deepcopy(self.val_reconstruction_evaluators)
         self.test_metrics = copy.deepcopy(self.val_metrics)
+        self.init_idx_to_dataset()
+
+    def init_idx_to_dataset(self, ):
+        datasets = [
+            ("mp20", self.hparams.datasets.mp20.proportion),
+            ("qm9", self.hparams.datasets.qm9.proportion),
+            ("qmof150", self.hparams.datasets.qmof150.proportion)
+        ]
+        filtered_datasets = [name for name, prop in datasets if prop > 0]
+        self.IDX_TO_DATASET = {idx: name for idx, name in enumerate(filtered_datasets)}
 
     def encode(self, batch):
         encoded_batch = self.encoder(batch)
@@ -509,7 +513,7 @@ class VariationalAutoencoderLitModule(LightningModule):
     def on_validation_epoch_start(self) -> None:
         self.on_evaluation_epoch_start(stage="val")
 
-    def validation_step(self, batch: Data, batch_idx: int, dataloader_idx: int) -> None:
+    def validation_step(self, batch: Data, batch_idx: int, dataloader_idx: int = 0) -> None:
         self.evaluation_step(batch, batch_idx, dataloader_idx, stage="val")
 
     def on_validation_epoch_end(self) -> None:
@@ -520,7 +524,7 @@ class VariationalAutoencoderLitModule(LightningModule):
     def on_test_epoch_start(self) -> None:
         self.on_evaluation_epoch_start(stage="test")
 
-    def test_step(self, batch: Data, batch_idx: int, dataloader_idx: int) -> None:
+    def test_step(self, batch: Data, batch_idx: int, dataloader_idx: int = 0) -> None:
         self.evaluation_step(batch, batch_idx, dataloader_idx, stage="test")
 
     def on_test_epoch_end(self) -> None:
@@ -551,9 +555,9 @@ class VariationalAutoencoderLitModule(LightningModule):
 
         if stage not in ["val", "test"]:
             raise ValueError("stage must be 'val' or 'test'.")
-        metrics = getattr(self, f"{stage}_metrics")[IDX_TO_DATASET[dataloader_idx]]
+        metrics = getattr(self, f"{stage}_metrics")[self.IDX_TO_DATASET[dataloader_idx]]
         reconstruction_evaluator = getattr(self, f"{stage}_reconstruction_evaluators")[
-            IDX_TO_DATASET[dataloader_idx]
+            self.IDX_TO_DATASET[dataloader_idx]
         ]
         reconstruction_evaluator.device = metrics["loss"].device
 
@@ -567,7 +571,7 @@ class VariationalAutoencoderLitModule(LightningModule):
         for k, v in loss_dict.items():
             metrics[k](v)
             self.log(
-                f"{stage}_{IDX_TO_DATASET[dataloader_idx]}/{k}",
+                f"{stage}_{self.IDX_TO_DATASET[dataloader_idx]}/{k}",
                 metrics[k],
                 on_step=False,
                 on_epoch=True,
