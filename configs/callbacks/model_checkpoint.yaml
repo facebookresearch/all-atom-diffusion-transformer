@@ -7,7 +7,7 @@ model_checkpoint:
   monitor: null # name of the logged metric which determines when model is improving
   verbose: True # verbosity mode
   save_last: True # additionally always save an exact copy of the last checkpoint to a file last.ckpt
-  save_top_k: 3 # save k best models (determined by above metric)
+  save_top_k: 2 # save k best models (determined by above metric)
   mode: "max" # "max" means higher metric value is better, can be also "min"
   auto_insert_metric_name: False # when True, the checkpoints filenames will contain the metric name
   save_weights_only: False # if True, then only the model’s weights will be saved
