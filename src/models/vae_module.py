@@ -142,6 +142,9 @@ class VariationalAutoencoderLitModule(LightningModule):
         self.encoder = encoder
         self.decoder = decoder
 
+        # for compatibility with energy head in Latent Diffusion
+        self.latent_dim = latent_dim
+
         # quantization layers (following naming convention from Latent Diffusion)
         self.quant_conv = torch.nn.Linear(self.encoder.d_model, 2 * latent_dim, bias=False)
         self.post_quant_conv = torch.nn.Linear(latent_dim, self.decoder.d_model, bias=False)

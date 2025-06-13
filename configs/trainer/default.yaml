@@ -3,9 +3,9 @@ _target_: lightning.pytorch.trainer.Trainer
 default_root_dir: ${paths.output_dir}
 
 min_epochs: 1 # prevents early stopping
-max_epochs: 5000
+max_epochs: 10
 
-accelerator: cpu
+accelerator: gpu
 devices: 1
 
 # limit_train_batches: 0.01 # useful for debugging
@@ -14,10 +14,10 @@ devices: 1
 # precision: 16
 
 # perform a validation loop every N training epochs
-check_val_every_n_epoch: 250
+check_val_every_n_epoch: 5
 
 # log metrics every N steps
-log_every_n_steps: 100
+log_every_n_steps: 1
 
 # disable sanity validation checks (don't run on untrained generative models)
 num_sanity_val_steps: 0

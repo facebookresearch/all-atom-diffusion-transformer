@@ -30,16 +30,16 @@ from src.utils import pylogger
 log = pylogger.RankedLogger(__name__)
 
 
-IDX_TO_DATASET = {
-    0: "mp20",
-    1: "qm9",
-    2: "qmof150",
-}
-DATASET_TO_IDX = {
-    "mp20": 0,  # periodic
-    "qm9": 1,  # non-periodic
-    "qmof150": 0,  # periodic
-}
+# IDX_TO_DATASET = {
+#     0: "mp20",
+#     1: "qm9",
+#     2: "qmof150",
+# }
+# DATASET_TO_IDX = {
+#     "mp20": 0,  # periodic
+#     "qm9": 1,  # non-periodic
+#     "qmof150": 0,  # periodic
+# }
 
 
 class LatentDiffusionLitModule(LightningModule):
@@ -87,6 +87,9 @@ class LatentDiffusionLitModule(LightningModule):
         scheduler: torch.optim.lr_scheduler.LRScheduler,
         scheduler_frequency: str,
         compile: bool,
+        lambda_energy: float = 0.2,  # weight for energy loss
+        energy_head_hidden_dim: int = 128,  # hidden dimension for energy head
+        disable_evaluators=False,  # add this
     ) -> None:
         super().__init__()
 
@@ -111,27 +114,33 @@ class LatentDiffusionLitModule(LightningModule):
         self.interpolant = interpolant
 
         # evaluator objects for computing metrics
-        self.val_generation_evaluators = {
-            "mp20": CrystalGenerationEvaluator(
-                dataset_cif_list=pd.read_csv(
-                    os.path.join(self.hparams.sampling.data_dir, f"mp_20/raw/all.csv")
-                )["cif"].tolist()
-            ),
-            "qm9": MoleculeGenerationEvaluator(
-                dataset_smiles_list=torch.load(
-                    os.path.join(self.hparams.sampling.data_dir, f"qm9/smiles.pt"),
+        if not getattr(self.hparams, "disable_evaluators", False):
+            self.val_generation_evaluators = {
+                # "mp20": CrystalGenerationEvaluator(
+                #     dataset_cif_list=pd.read_csv(
+                #         os.path.join(self.hparams.sampling.data_dir, f"mp_20/raw/all.csv")
+                #     )["cif"].tolist()
+                # ),
+                "qm9": MoleculeGenerationEvaluator(
+                    dataset_smiles_list=torch.load(
+                        os.path.join(self.hparams.sampling.data_dir, f"qm9/smiles.pt"),
+                    ),
+                    removeHs=self.hparams.sampling.removeHs,
                 ),
-                removeHs=self.hparams.sampling.removeHs,
-            ),
-            "qmof150": MOFGenerationEvaluator(),
-        }
-        self.test_generation_evaluators = copy.deepcopy(self.val_generation_evaluators)
+                # "qmof150": MOFGenerationEvaluator(),
+            }
+            self.test_generation_evaluators = copy.deepcopy(self.val_generation_evaluators)
+        else:
+            log.warning("Evaluator loading disabled for testing.")
+            self.val_generation_evaluators = {}
+            self.test_generation_evaluators = {}
 
         # metric objects for calculating and averaging across batches
         self.train_metrics = ModuleDict(
             {
                 "loss": MeanMetric(),
                 "x_loss": MeanMetric(),
+                "energy_loss": MeanMetric(),  # energy-aware loss
                 "x_loss t=[0,25)": MeanMetric(),
                 "x_loss t=[25,50)": MeanMetric(),
                 "x_loss t=[50,75)": MeanMetric(),
@@ -142,27 +151,29 @@ class LatentDiffusionLitModule(LightningModule):
         )
         self.val_metrics = ModuleDict(
             {
-                "mp20": ModuleDict(
-                    {
-                        "loss": MeanMetric(),
-                        "x_loss": MeanMetric(),
-                        "x_loss t=[0,25)": MeanMetric(),
-                        "x_loss t=[25,50)": MeanMetric(),
-                        "x_loss t=[50,75)": MeanMetric(),
-                        "x_loss t=[75,100)": MeanMetric(),
-                        "t_avg": MeanMetric(),
-                        "valid_rate": MeanMetric(),
-                        "struct_valid_rate": MeanMetric(),
-                        "comp_valid_rate": MeanMetric(),
-                        "unique_rate": MeanMetric(),
-                        "novel_rate": MeanMetric(),
-                        "sampling_time": MeanMetric(),
-                    }
-                ),
+                # "mp20": ModuleDict(
+                #     {
+                #         "loss": MeanMetric(),
+                #         "x_loss": MeanMetric(),
+                #         "energy_loss": MeanMetric(),  # energy-aware loss
+                #         "x_loss t=[0,25)": MeanMetric(),
+                #         "x_loss t=[25,50)": MeanMetric(),
+                #         "x_loss t=[50,75)": MeanMetric(),
+                #         "x_loss t=[75,100)": MeanMetric(),
+                #         "t_avg": MeanMetric(),
+                #         "valid_rate": MeanMetric(),
+                #         "struct_valid_rate": MeanMetric(),
+                #         "comp_valid_rate": MeanMetric(),
+                #         "unique_rate": MeanMetric(),
+                #         "novel_rate": MeanMetric(),
+                #         "sampling_time": MeanMetric(),
+                #     }
+                # ),
                 "qm9": ModuleDict(
                     {
                         "loss": MeanMetric(),
                         "x_loss": MeanMetric(),
+                        "energy_loss": MeanMetric(),  # energy-aware loss
                         "x_loss t=[0,25)": MeanMetric(),
                         "x_loss t=[25,50)": MeanMetric(),
                         "x_loss t=[50,75)": MeanMetric(),
@@ -184,51 +195,52 @@ class LatentDiffusionLitModule(LightningModule):
                         "sampling_time": MeanMetric(),
                     }
                 ),
-                "qmof150": ModuleDict(
-                    {
-                        "loss": MeanMetric(),
-                        "x_loss": MeanMetric(),
-                        "x_loss t=[0,25)": MeanMetric(),
-                        "x_loss t=[25,50)": MeanMetric(),
-                        "x_loss t=[50,75)": MeanMetric(),
-                        "x_loss t=[75,100)": MeanMetric(),
-                        "t_avg": MeanMetric(),
-                        "valid_rate": MeanMetric(),
-                        "unique_rate": MeanMetric(),
-                        "has_carbon": MeanMetric(),
-                        "has_hydrogen": MeanMetric(),
-                        "has_atomic_overlaps": MeanMetric(),
-                        "has_overcoordinated_c": MeanMetric(),
-                        "has_overcoordinated_n": MeanMetric(),
-                        "has_overcoordinated_h": MeanMetric(),
-                        "has_undercoordinated_c": MeanMetric(),
-                        "has_undercoordinated_n": MeanMetric(),
-                        "has_undercoordinated_rare_earth": MeanMetric(),
-                        "has_metal": MeanMetric(),
-                        "has_lone_molecule": MeanMetric(),
-                        "has_high_charges": MeanMetric(),
-                        # "is_porous": MeanMetric(),
-                        "has_suspicicious_terminal_oxo": MeanMetric(),
-                        "has_undercoordinated_alkali_alkaline": MeanMetric(),
-                        "has_geometrically_exposed_metal": MeanMetric(),
-                        # 'has_3d_connected_graph': MeanMetric(),
-                        "all_checks": MeanMetric(),
-                        "sampling_time": MeanMetric(),
-                    }
-                ),
+                # "qmof150": ModuleDict(
+                #     {
+                #         "loss": MeanMetric(),
+                #         "x_loss": MeanMetric(),
+                #         "energy_loss": MeanMetric(),  # energy-aware loss
+                #         "x_loss t=[0,25)": MeanMetric(),
+                #         "x_loss t=[25,50)": MeanMetric(),
+                #         "x_loss t=[50,75)": MeanMetric(),
+                #         "x_loss t=[75,100)": MeanMetric(),
+                #         "t_avg": MeanMetric(),
+                #         "valid_rate": MeanMetric(),
+                #         "unique_rate": MeanMetric(),
+                #         "has_carbon": MeanMetric(),
+                #         "has_hydrogen": MeanMetric(),
+                #         "has_atomic_overlaps": MeanMetric(),
+                #         "has_overcoordinated_c": MeanMetric(),
+                #         "has_overcoordinated_n": MeanMetric(),
+                #         "has_overcoordinated_h": MeanMetric(),
+                #         "has_undercoordinated_c": MeanMetric(),
+                #         "has_undercoordinated_n": MeanMetric(),
+                #         "has_undercoordinated_rare_earth": MeanMetric(),
+                #         "has_metal": MeanMetric(),
+                #         "has_lone_molecule": MeanMetric(),
+                #         "has_high_charges": MeanMetric(),
+                #         # "is_porous": MeanMetric(),
+                #         "has_suspicicious_terminal_oxo": MeanMetric(),
+                #         "has_undercoordinated_alkali_alkaline": MeanMetric(),
+                #         "has_geometrically_exposed_metal": MeanMetric(),
+                #         # 'has_3d_connected_graph': MeanMetric(),
+                #         "all_checks": MeanMetric(),
+                #         "sampling_time": MeanMetric(),
+                #     }
+                # ),
             }
         )
         self.test_metrics = copy.deepcopy(self.val_metrics)
 
         # load bincounts for sampling
         self.num_nodes_bincount = {
-            "mp20": torch.nn.Parameter(
-                torch.load(
-                    os.path.join(self.hparams.sampling.data_dir, f"mp_20/num_nodes_bincount.pt"),
-                    map_location="cpu",
-                ),
-                requires_grad=False,
-            ),
+            # "mp20": torch.nn.Parameter(
+            #     torch.load(
+            #         os.path.join(self.hparams.sampling.data_dir, f"mp_20/num_nodes_bincount.pt"),
+            #         map_location="cpu",
+            #     ),
+            #     requires_grad=False,
+            # ),
             "qm9": torch.nn.Parameter(
                 torch.load(
                     os.path.join(self.hparams.sampling.data_dir, f"qm9/num_nodes_bincount.pt"),
@@ -236,25 +248,42 @@ class LatentDiffusionLitModule(LightningModule):
                 ),
                 requires_grad=False,
             ),
-            "qmof150": torch.nn.Parameter(
-                torch.load(
-                    os.path.join(self.hparams.sampling.data_dir, f"qmof/num_nodes_bincount.pt"),
-                    map_location="cpu",
-                ),
-                requires_grad=False,
-            ),
+            # "qmof150": torch.nn.Parameter(
+            #     torch.load(
+            #         os.path.join(self.hparams.sampling.data_dir, f"qmof/num_nodes_bincount.pt"),
+            #         map_location="cpu",
+            #     ),
+            #     requires_grad=False,
+            # ),
         }
         self.spacegroups_bincount = {
-            "mp20": torch.nn.Parameter(
-                torch.load(
-                    os.path.join(self.hparams.sampling.data_dir, f"mp_20/spacegroups_bincount.pt"),
-                    map_location="cpu",
-                ),
-                requires_grad=False,
-            ),
+            # "mp20": torch.nn.Parameter(
+            #     torch.load(
+            #         os.path.join(self.hparams.sampling.data_dir, f"mp_20/spacegroups_bincount.pt"),
+            #         map_location="cpu",
+            #     ),
+            #     requires_grad=False,
+            # ),
             "qm9": None,
-            "qmof150": None,
+            # "qmof150": None,
         }
+
+        # Dynamically detect active datasets based on metrics
+        self.datasets = list(self.val_metrics.keys())
+        self.dataset_to_idx = {d: i for i, d in enumerate(self.datasets)}
+
+        # Energy-aware extension
+        # Energy prediction head maps latent vector -> scalar energy
+        if hasattr(self.autoencoder, "latent_dim"):
+            latent_dim = self.autoencoder.latent_dim
+        else:
+            raise AttributeError("autoencoder is missing latent_dim attribute. Please add `self.latent_dim = latent_dim` to the VAE.")
+
+        self.energy_head = torch.nn.Sequential(
+            torch.nn.Linear(latent_dim, self.hparams.energy_head_hidden_dim),
+            torch.nn.ReLU(),
+            torch.nn.Linear(self.hparams.energy_head_hidden_dim, 1)
+        )
 
     def forward(self, batch: Data, sample_posterior: bool = True):
         # Encode batch to latent space
@@ -318,7 +347,8 @@ class LatentDiffusionLitModule(LightningModule):
     ) -> dict[str, torch.Tensor]:
         # Compute MSE loss w/ masking for padded tokens
         gt_x_1 = noisy_dense_encoded_batch["x_1"]
-        norm_scale = 1 - torch.min(noisy_dense_encoded_batch["t"].unsqueeze(-1), torch.tensor(0.9))
+        # norm_scale = 1 - torch.min(noisy_dense_encoded_batch["t"].unsqueeze(-1), torch.tensor(0.9))  # causes bradcasting issue
+        norm_scale = 1 - torch.min(noisy_dense_encoded_batch["t"].view(-1, 1, 1), torch.tensor(0.9))
         x_error = (gt_x_1 - pred_x) / norm_scale
         loss_mask = (
             noisy_dense_encoded_batch["token_mask"] * noisy_dense_encoded_batch["diffuse_mask"]
@@ -370,29 +400,32 @@ class LatentDiffusionLitModule(LightningModule):
         """
         with torch.no_grad():
             # save masks used to apply augmentations
-            sample_is_periodic = batch.dataset_idx != DATASET_TO_IDX["qm9"]
-            node_is_periodic = sample_is_periodic[batch.batch]
+            # sample_is_periodic = batch.dataset_idx != DATASET_TO_IDX["qm9"]
+            # node_is_periodic = sample_is_periodic[batch.batch]
+            sample_is_qm9 = batch.dataset_idx == self.dataset_to_idx["qm9"]
+            node_is_qm9 = sample_is_qm9[batch.batch]
+            node_is_periodic = ~node_is_qm9  # only periodic atoms need frac_coords recomputation
 
-            if self.hparams.augmentations.frac_coords == True:
-                if node_is_periodic.any():
-                    # sample random translation vector from batch length distribution / 2
-                    random_translation = (
-                        torch.normal(
-                            torch.abs(batch.lengths.mean(dim=0)),
-                            torch.abs(batch.lengths.std(dim=0)) + 1e-8,
-                        )
-                        / 2
-                    )
-                    # apply same random translation to all Cartesian coordinates
-                    pos_aug = batch.pos + random_translation
-                    batch.pos = pos_aug
-                    # compute new fractional coordinates for samples which are periodic
-                    cell_per_node_inv = torch.linalg.inv(batch.cell[batch.batch][node_is_periodic])
-                    frac_coords_aug = torch.einsum(
-                        "bi,bij->bj", batch.pos[node_is_periodic], cell_per_node_inv
-                    )
-                    frac_coords_aug = frac_coords_aug % 1.0
-                    batch.frac_coords[node_is_periodic] = frac_coords_aug
+            # if self.hparams.augmentations.frac_coords == True:
+            #     if node_is_periodic.any():
+            #         # sample random translation vector from batch length distribution / 2
+            #         random_translation = (
+            #             torch.normal(
+            #                 torch.abs(batch.lengths.mean(dim=0)),
+            #                 torch.abs(batch.lengths.std(dim=0)) + 1e-8,
+            #             )
+            #             / 2
+            #         )
+            #         # apply same random translation to all Cartesian coordinates
+            #         pos_aug = batch.pos + random_translation
+            #         batch.pos = pos_aug
+            #         # compute new fractional coordinates for samples which are periodic
+            #         cell_per_node_inv = torch.linalg.inv(batch.cell[batch.batch][node_is_periodic])
+            #         frac_coords_aug = torch.einsum(
+            #             "bi,bij->bj", batch.pos[node_is_periodic], cell_per_node_inv
+            #         )
+            #         frac_coords_aug = frac_coords_aug % 1.0
+            #         batch.frac_coords[node_is_periodic] = frac_coords_aug
 
             if self.hparams.augmentations.pos == True:
                 rot_mat = random_rotation_matrix(validate=True, device=self.device)
@@ -411,8 +444,27 @@ class LatentDiffusionLitModule(LightningModule):
         # forward pass
         pred_x, noisy_dense_encoded_batch = self.forward(batch)
 
-        # calculate loss
+        # calculate diffusion loss
         loss_dict = self.criterion(noisy_dense_encoded_batch, pred_x)
+
+        # calculate energy-aware loss
+        if self.hparams.lambda_energy > 0:
+            z_latent = noisy_dense_encoded_batch["x_1"]           # shape: (B, T, D)
+            z_mask = noisy_dense_encoded_batch["token_mask"]      # shape: (B, T)
+            z_sum = (z_latent * z_mask.unsqueeze(-1)).sum(dim=1)  # (B, D)
+            z_count = z_mask.sum(dim=1, keepdim=True).clamp(min=1)
+            z_mean = z_sum / z_count                              # (B, D)
+            energy_pred = self.energy_head(z_mean).squeeze(-1)    # (B,)
+
+            if hasattr(batch, "energy"):
+                energy_gt = batch.energy.to(energy_pred.device)   # (B,)
+                # scale energy loss to avoid exploding gradients
+                energy_loss = 1e-08 * F.mse_loss(energy_pred, energy_gt)
+                weighted_energy_loss = self.hparams.lambda_energy * energy_loss
+                loss_dict["energy_loss"] = energy_loss
+                loss_dict["loss"] = loss_dict["loss"] + weighted_energy_loss
+            else:
+                log.warning("Energy labels not found in batch. Skipping energy loss.")
 
         # log relative proportions of datasets in batch
         loss_dict["dataset_idx"] = batch.dataset_idx.detach().flatten()
@@ -436,7 +488,7 @@ class LatentDiffusionLitModule(LightningModule):
     def on_validation_epoch_start(self) -> None:
         self.on_evaluation_epoch_start(stage="val")
 
-    def validation_step(self, batch: Data, batch_idx: int, dataloader_idx: int) -> None:
+    def validation_step(self, batch: Data, batch_idx: int, dataloader_idx: int=0) -> None:
         self.evaluation_step(batch, batch_idx, dataloader_idx, stage="val")
 
     def on_validation_epoch_end(self) -> None:
@@ -447,7 +499,7 @@ class LatentDiffusionLitModule(LightningModule):
     def on_test_epoch_start(self) -> None:
         self.on_evaluation_epoch_start(stage="test")
 
-    def test_step(self, batch: Data, batch_idx: int, dataloader_idx: int) -> None:
+    def test_step(self, batch: Data, batch_idx: int, dataloader_idx: int=0) -> None:
         self.evaluation_step(batch, batch_idx, dataloader_idx, stage="test")
 
     def on_test_epoch_end(self) -> None:
@@ -478,23 +530,45 @@ class LatentDiffusionLitModule(LightningModule):
 
         if stage not in ["val", "test"]:
             raise ValueError("stage must be 'val' or 'test'.")
-        metrics = getattr(self, f"{stage}_metrics")[IDX_TO_DATASET[dataloader_idx]]
-        generation_evaluator = getattr(self, f"{stage}_generation_evaluators")[
-            IDX_TO_DATASET[dataloader_idx]
-        ]
+        # metrics = getattr(self, f"{stage}_metrics")[IDX_TO_DATASET[dataloader_idx]]
+        # generation_evaluator = getattr(self, f"{stage}_generation_evaluators")[
+        #     IDX_TO_DATASET[dataloader_idx]
+        # ]
+        dataset = self.datasets[dataloader_idx]
+        metrics = getattr(self, f"{stage}_metrics")[dataset]
+        generation_evaluator = getattr(self, f"{stage}_generation_evaluators")[dataset]
         generation_evaluator.device = metrics["loss"].device
 
         # forward pass
         pred_x, noisy_dense_encoded_batch = self.forward(batch)
 
-        # calculate loss
+        # calculate diffusion loss
         loss_dict = self.criterion(noisy_dense_encoded_batch, pred_x)
+
+        # calculate energy-aware loss ===
+        if self.hparams.lambda_energy > 0:
+            z_latent = noisy_dense_encoded_batch["x_1"]           # shape: (B, T, D)
+            z_mask = noisy_dense_encoded_batch["token_mask"]      # shape: (B, T)
+            z_sum = (z_latent * z_mask.unsqueeze(-1)).sum(dim=1)  # (B, D)
+            z_count = z_mask.sum(dim=1, keepdim=True).clamp(min=1)
+            z_mean = z_sum / z_count                              # (B, D)
+            energy_pred = self.energy_head(z_mean).squeeze(-1)    # (B,)
+
+            if hasattr(batch, "energy"):
+                energy_gt = batch.energy.to(energy_pred.device)   # (B,)
+                energy_loss = F.mse_loss(energy_pred, energy_gt)
+                weighted_energy_loss = self.hparams.lambda_energy * energy_loss
+                loss_dict["energy_loss"] = energy_loss
+                loss_dict["loss"] = loss_dict["loss"] + weighted_energy_loss
+            else:
+                log.warning(f"Energy labels not found in batch during {stage}. Skipping energy loss.")
 
         # update and log per-step val metrics
         for k, v in loss_dict.items():
             metrics[k](v)
             self.log(
-                f"{stage}_{IDX_TO_DATASET[dataloader_idx]}/{k}",
+                # f"{stage}_{IDX_TO_DATASET[dataloader_idx]}/{k}",
+                f"{stage}_{dataset}/{k}",
                 metrics[k],
                 on_step=False,
                 on_epoch=True,
@@ -511,7 +585,8 @@ class LatentDiffusionLitModule(LightningModule):
         metrics = getattr(self, f"{stage}_metrics")
         generation_evaluators = getattr(self, f"{stage}_generation_evaluators")
 
-        for dataset in metrics.keys():
+        # for dataset in metrics.keys():
+        for dataset in self.datasets:
             generation_evaluators[dataset].device = metrics[dataset]["loss"].device
             t_start = time.time()
             for samples_so_far in tqdm(
@@ -524,7 +599,9 @@ class LatentDiffusionLitModule(LightningModule):
                     spacegroups_bincount=self.spacegroups_bincount[dataset],
                     batch_size=self.hparams.sampling.batch_size,
                     cfg_scale=self.hparams.sampling.cfg_scale,
-                    dataset_idx=DATASET_TO_IDX[dataset],
+                    # dataset_idx=DATASET_TO_IDX[dataset],
+                    dataset_idx=self.dataset_to_idx[dataset],
+
                 )
                 # Save predictions for metrics and visualisation
                 start_idx = 0

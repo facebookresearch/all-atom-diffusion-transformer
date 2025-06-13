@@ -1,5 +1,6 @@
 datamodule:
-  _target_: src.data.joint_datamodule.JointDataModule
+  # _target_: src.data.joint_datamodule.JointDataModule
+  _target_: src.data.qm9_datamodule.QM9DataModule
 
   datasets:
 
@@ -11,7 +12,7 @@ datamodule:
     qm9:
       _target_: torch_geometric.datasets.QM9
       root: ${paths.data_dir}/qm9
-      removeHs: false  # only retain heavy atoms
+      removeHs: true  # only retain heavy atoms
       proportion: 1.0
 
     qmof150:

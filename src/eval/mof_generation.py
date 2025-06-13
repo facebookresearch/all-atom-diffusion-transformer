@@ -12,7 +12,7 @@ import wandb
 from pymatgen.analysis.structure_matcher import StructureMatcher
 from pymatgen.core.lattice import Lattice
 from pymatgen.core.structure import Structure
-from pymatgen.symmetry.analyzer import SymmetryUndeterminedError
+# from pymatgen.symmetry.analyzer import SymmetryUndeterminedError
 from tqdm import tqdm
 
 from src.tools.ase_notebook import AseView

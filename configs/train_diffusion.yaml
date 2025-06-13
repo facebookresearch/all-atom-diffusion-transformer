@@ -3,10 +3,10 @@
 # specify here default configuration
 # order of defaults determines the order in which configs override each other
 defaults:
-  - data: joint  # joint / qm9_only / mp20_only
+  - data: qm9_only  # joint / qm9_only / mp20_only
   - diffusion_module: ldm
-  - callbacks: diffusion_default  # diffusion_default / _qm9_only / _mp20_only
-  - logger: null # set logger here or use command line (e.g. `python train.py logger=tensorboard`)
+  - callbacks: diffusion_qm9_only  # diffusion_default / _qm9_only / _mp20_only
+  - logger: wandb # set logger here or use command line (e.g. `python train.py logger=tensorboard`)
   - trainer: default
   - paths: default
   - extras: default
@@ -22,7 +22,7 @@ task_name: "train_diffusion"
 # tags to help you identify your experiments
 # you can overwrite this in experiment configs
 # overwrite from command line with `python train.py tags="[first_tag, second_tag]"`
-tags: ["joint", "diffusion", "train"]
+tags: ["QM9", "diffusion", "train"]
 
 # set False to skip model training
 train: True
@@ -32,7 +32,7 @@ train: True
 test: True
 
 # simply provide checkpoint path to resume training
-ckpt_path: null
+ckpt_path: ldm_with_energy_head.ckpt
 
 # seed for random number generators in pytorch, numpy and python.random
 seed: 9

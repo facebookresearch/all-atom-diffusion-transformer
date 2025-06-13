@@ -92,7 +92,15 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
 
     if cfg.get("train"):
         log.info("Starting training!")
-        trainer.fit(model=model, datamodule=datamodule, ckpt_path=cfg.get("ckpt_path"))
+
+        if ckpt_path := cfg.get("ckpt_path"):
+            log.info(f"Loading weights from: {ckpt_path}")
+            ckpt = torch.load(ckpt_path, map_location="cpu")
+            model.load_state_dict(ckpt["state_dict"], strict=False)
+            trainer.fit(model=model, datamodule=datamodule)
+        else:
+            log.info("No checkpoint path provided, training from scratch.")
+            trainer.fit(model=model, datamodule=datamodule, ckpt_path=cfg.get("ckpt_path"))
 
     train_metrics = trainer.callback_metrics
 
