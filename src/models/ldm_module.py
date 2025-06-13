@@ -277,12 +277,14 @@ class LatentDiffusionLitModule(LightningModule):
         if hasattr(self.autoencoder, "latent_dim"):
             latent_dim = self.autoencoder.latent_dim
         else:
-            raise AttributeError("autoencoder is missing latent_dim attribute. Please add `self.latent_dim = latent_dim` to the VAE.")
+            raise AttributeError(
+                "autoencoder is missing latent_dim attribute. Please add `self.latent_dim = latent_dim` to the VAE."
+            )
 
         self.energy_head = torch.nn.Sequential(
             torch.nn.Linear(latent_dim, self.hparams.energy_head_hidden_dim),
             torch.nn.ReLU(),
-            torch.nn.Linear(self.hparams.energy_head_hidden_dim, 1)
+            torch.nn.Linear(self.hparams.energy_head_hidden_dim, 1),
         )
 
     def forward(self, batch: Data, sample_posterior: bool = True):
@@ -348,7 +350,9 @@ class LatentDiffusionLitModule(LightningModule):
         # Compute MSE loss w/ masking for padded tokens
         gt_x_1 = noisy_dense_encoded_batch["x_1"]
         # norm_scale = 1 - torch.min(noisy_dense_encoded_batch["t"].unsqueeze(-1), torch.tensor(0.9))  # causes bradcasting issue
-        norm_scale = 1 - torch.min(noisy_dense_encoded_batch["t"].view(-1, 1, 1), torch.tensor(0.9))
+        norm_scale = 1 - torch.min(
+            noisy_dense_encoded_batch["t"].view(-1, 1, 1), torch.tensor(0.9)
+        )
         x_error = (gt_x_1 - pred_x) / norm_scale
         loss_mask = (
             noisy_dense_encoded_batch["token_mask"] * noisy_dense_encoded_batch["diffuse_mask"]
@@ -449,15 +453,15 @@ class LatentDiffusionLitModule(LightningModule):
 
         # calculate energy-aware loss
         if self.hparams.lambda_energy > 0:
-            z_latent = noisy_dense_encoded_batch["x_1"]           # shape: (B, T, D)
-            z_mask = noisy_dense_encoded_batch["token_mask"]      # shape: (B, T)
+            z_latent = noisy_dense_encoded_batch["x_1"]  # shape: (B, T, D)
+            z_mask = noisy_dense_encoded_batch["token_mask"]  # shape: (B, T)
             z_sum = (z_latent * z_mask.unsqueeze(-1)).sum(dim=1)  # (B, D)
             z_count = z_mask.sum(dim=1, keepdim=True).clamp(min=1)
-            z_mean = z_sum / z_count                              # (B, D)
-            energy_pred = self.energy_head(z_mean).squeeze(-1)    # (B,)
+            z_mean = z_sum / z_count  # (B, D)
+            energy_pred = self.energy_head(z_mean).squeeze(-1)  # (B,)
 
             if hasattr(batch, "energy"):
-                energy_gt = batch.energy.to(energy_pred.device)   # (B,)
+                energy_gt = batch.energy.to(energy_pred.device)  # (B,)
                 # scale energy loss to avoid exploding gradients
                 energy_loss = 1e-08 * F.mse_loss(energy_pred, energy_gt)
                 weighted_energy_loss = self.hparams.lambda_energy * energy_loss
@@ -488,7 +492,7 @@ class LatentDiffusionLitModule(LightningModule):
     def on_validation_epoch_start(self) -> None:
         self.on_evaluation_epoch_start(stage="val")
 
-    def validation_step(self, batch: Data, batch_idx: int, dataloader_idx: int=0) -> None:
+    def validation_step(self, batch: Data, batch_idx: int, dataloader_idx: int = 0) -> None:
         self.evaluation_step(batch, batch_idx, dataloader_idx, stage="val")
 
     def on_validation_epoch_end(self) -> None:
@@ -499,7 +503,7 @@ class LatentDiffusionLitModule(LightningModule):
     def on_test_epoch_start(self) -> None:
         self.on_evaluation_epoch_start(stage="test")
 
-    def test_step(self, batch: Data, batch_idx: int, dataloader_idx: int=0) -> None:
+    def test_step(self, batch: Data, batch_idx: int, dataloader_idx: int = 0) -> None:
         self.evaluation_step(batch, batch_idx, dataloader_idx, stage="test")
 
     def on_test_epoch_end(self) -> None:
@@ -547,21 +551,23 @@ class LatentDiffusionLitModule(LightningModule):
 
         # calculate energy-aware loss ===
         if self.hparams.lambda_energy > 0:
-            z_latent = noisy_dense_encoded_batch["x_1"]           # shape: (B, T, D)
-            z_mask = noisy_dense_encoded_batch["token_mask"]      # shape: (B, T)
+            z_latent = noisy_dense_encoded_batch["x_1"]  # shape: (B, T, D)
+            z_mask = noisy_dense_encoded_batch["token_mask"]  # shape: (B, T)
             z_sum = (z_latent * z_mask.unsqueeze(-1)).sum(dim=1)  # (B, D)
             z_count = z_mask.sum(dim=1, keepdim=True).clamp(min=1)
-            z_mean = z_sum / z_count                              # (B, D)
-            energy_pred = self.energy_head(z_mean).squeeze(-1)    # (B,)
+            z_mean = z_sum / z_count  # (B, D)
+            energy_pred = self.energy_head(z_mean).squeeze(-1)  # (B,)
 
             if hasattr(batch, "energy"):
-                energy_gt = batch.energy.to(energy_pred.device)   # (B,)
+                energy_gt = batch.energy.to(energy_pred.device)  # (B,)
                 energy_loss = F.mse_loss(energy_pred, energy_gt)
                 weighted_energy_loss = self.hparams.lambda_energy * energy_loss
                 loss_dict["energy_loss"] = energy_loss
                 loss_dict["loss"] = loss_dict["loss"] + weighted_energy_loss
             else:
-                log.warning(f"Energy labels not found in batch during {stage}. Skipping energy loss.")
+                log.warning(
+                    f"Energy labels not found in batch during {stage}. Skipping energy loss."
+                )
 
         # update and log per-step val metrics
         for k, v in loss_dict.items():
@@ -601,7 +607,6 @@ class LatentDiffusionLitModule(LightningModule):
                     cfg_scale=self.hparams.sampling.cfg_scale,
                     # dataset_idx=DATASET_TO_IDX[dataset],
                     dataset_idx=self.dataset_to_idx[dataset],
-
                 )
                 # Save predictions for metrics and visualisation
                 start_idx = 0

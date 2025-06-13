@@ -43,7 +43,9 @@ def custom_transform(data, removeHs=True):
 
 
 class QM9DataModule(LightningDataModule):
-    def __init__(self, datasets: DictConfig, num_workers: DictConfig, batch_size: DictConfig) -> None:
+    def __init__(
+        self, datasets: DictConfig, num_workers: DictConfig, batch_size: DictConfig
+    ) -> None:
         super().__init__()
         self.save_hyperparameters(logger=False)
 
@@ -68,9 +70,7 @@ class QM9DataModule(LightningDataModule):
         ]
 
         if stage is None or stage in ["fit", "validate"]:
-            self.train_dataset = ConcatDataset(
-                [self.qm9_train_dataset]
-            )
+            self.train_dataset = ConcatDataset([self.qm9_train_dataset])
             log.info(
                 f"Training dataset: {len(self.train_dataset)} samples (QM9: {len(self.qm9_train_dataset)})"
             )
