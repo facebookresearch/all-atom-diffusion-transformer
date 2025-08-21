@@ -379,7 +379,7 @@ class LatentDiffusionLitModule(LightningModule):
                     random_translation = (
                         torch.normal(
                             torch.abs(batch.lengths.mean(dim=0)),
-                            torch.abs(batch.lengths.std(dim=0)) + 1e-8,
+                            torch.abs(batch.lengths.std(dim=0).nan_to_num(1e-8)),
                         )
                         / 2
                     )
