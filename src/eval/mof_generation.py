@@ -293,6 +293,6 @@ def array_dict_to_structure(
             coords_are_cartesian=False,
         )
         struct.properties["sample_idx"] = sample_idx
-        struct.properties["struct_valid"] = False
+        struct.properties["valid"] = False
 
     return struct
