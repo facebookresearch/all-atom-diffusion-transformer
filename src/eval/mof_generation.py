@@ -281,7 +281,7 @@ def array_dict_to_structure(
     except:
         # returns an absurd MOF
         frac_coords = np.zeros_like(x["frac_coords"])
-        atom_types = np.zeros_like(x["atom_types"])
+        atom_types = np.ones_like(x["atom_types"])
         lengths = (100 * np.ones_like(x["lengths"])).squeeze().tolist()
         angles = (90 * np.ones_like(x["angles"])).squeeze().tolist()
         sample_idx = x["sample_idx"]
