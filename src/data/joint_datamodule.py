@@ -214,59 +214,37 @@ class JointDataModule(LightningDataModule):
         )
 
     def val_dataloader(self) -> Sequence[DataLoader]:
-        """Create and return the validation dataloader.
+        """Create and return the validation dataloader."""
+        datasets = [("mp20", self.mp20_val_dataset), ("qm9", self.qm9_val_dataset), ("qmof150", self.qmof150_val_dataset)]
+        self.dataloader_to_dataset = {}  
+        dataloaders = []
+        for name, ds in datasets:
+            if len(ds) > 0:
+                dataloaders.append(DataLoader(
+                    dataset=ds,
+                    batch_size=self.hparams.batch_size.val,
+                    num_workers=self.hparams.num_workers.val,
+                    pin_memory=False,
+                    shuffle=False,
+                ))
+                self.dataloader_to_dataset[len(dataloaders)-1] = name
 
-        :return: The validation dataloader.
-        """
-        return [
-            DataLoader(
-                dataset=self.mp20_val_dataset,
-                batch_size=self.hparams.batch_size.val,
-                num_workers=self.hparams.num_workers.val,
-                pin_memory=False,
-                shuffle=False,
-            ),
-            DataLoader(
-                dataset=self.qm9_val_dataset,
-                batch_size=self.hparams.batch_size.val,
-                num_workers=self.hparams.num_workers.val,
-                pin_memory=False,
-                shuffle=False,
-            ),
-            DataLoader(
-                dataset=self.qmof150_val_dataset,
-                batch_size=self.hparams.batch_size.val,
-                num_workers=self.hparams.num_workers.val,
-                pin_memory=False,
-                shuffle=False,
-            ),
-        ]
+        return dataloaders
 
     def test_dataloader(self) -> Sequence[DataLoader]:
-        """Create and return the test dataloader.
+        """Create and return the test dataloader."""
+        datasets = [("mp20", self.mp20_test_dataset), ("qm9", self.qm9_test_dataset), ("qmof150", self.qmof150_test_dataset)]
+        # self.testdataloader_to_dataset = {}  
+        dataloaders = []
+        for name, ds in datasets:
+            if len(ds) > 0:
+                dataloaders.append(DataLoader(
+                    dataset=ds,
+                    batch_size=self.hparams.batch_size.test,
+                    num_workers=self.hparams.num_workers.test,
+                    pin_memory=False,
+                    shuffle=False,
+                ))
+                # self.testdataloader_to_dataset[len(dataloaders)-1] = name
 
-        :return: The test dataloader.
-        """
-        return [
-            DataLoader(
-                dataset=self.mp20_test_dataset,
-                batch_size=self.hparams.batch_size.test,
-                num_workers=self.hparams.num_workers.test,
-                pin_memory=False,
-                shuffle=False,
-            ),
-            DataLoader(
-                dataset=self.qm9_test_dataset,
-                batch_size=self.hparams.batch_size.test,
-                num_workers=self.hparams.num_workers.test,
-                pin_memory=False,
-                shuffle=False,
-            ),
-            DataLoader(
-                dataset=self.qmof150_test_dataset,
-                batch_size=self.hparams.batch_size.test,
-                num_workers=self.hparams.num_workers.test,
-                pin_memory=False,
-                shuffle=False,
-            ),
-        ]
+        return dataloaders

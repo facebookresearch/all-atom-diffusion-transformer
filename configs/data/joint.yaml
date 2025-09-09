@@ -1,3 +1,6 @@
+defaults:
+  - default
+
 datamodule:
   _target_: src.data.joint_datamodule.JointDataModule
 
@@ -18,13 +21,3 @@ datamodule:
       _target_: src.data.components.qmof150_dataset.QMOF150
       root: ${paths.data_dir}/qmof
       proportion: 0.0
-
-  batch_size:
-    train: 256
-    val: 256
-    test: 256
-
-  num_workers:
-    train: 16
-    val: 16
-    test: 16

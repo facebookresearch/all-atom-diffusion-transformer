@@ -30,11 +30,6 @@ from src.utils import pylogger
 log = pylogger.RankedLogger(__name__)
 
 
-IDX_TO_DATASET = {
-    0: "mp20",
-    1: "qm9",
-    2: "qmof150",
-}
 DATASET_TO_IDX = {
     "mp20": 0,  # periodic
     "qm9": 1,  # non-periodic
@@ -77,6 +72,7 @@ class LatentDiffusionLitModule(LightningModule):
 
     def __init__(
         self,
+        datasets: DictConfig,
         autoencoder_ckpt: str,
         denoiser: torch.nn.Module,
         interpolant: DictConfig,
@@ -110,23 +106,6 @@ class LatentDiffusionLitModule(LightningModule):
         # interpolant for diffusion or flow matching training/sampling
         self.interpolant = interpolant
 
-        # evaluator objects for computing metrics
-        self.val_generation_evaluators = {
-            "mp20": CrystalGenerationEvaluator(
-                dataset_cif_list=pd.read_csv(
-                    os.path.join(self.hparams.sampling.data_dir, f"mp_20/raw/all.csv")
-                )["cif"].tolist()
-            ),
-            "qm9": MoleculeGenerationEvaluator(
-                dataset_smiles_list=torch.load(
-                    os.path.join(self.hparams.sampling.data_dir, f"qm9/smiles.pt"),
-                ),
-                removeHs=self.hparams.sampling.removeHs,
-            ),
-            "qmof150": MOFGenerationEvaluator(),
-        }
-        self.test_generation_evaluators = copy.deepcopy(self.val_generation_evaluators)
-
         # metric objects for calculating and averaging across batches
         self.train_metrics = ModuleDict(
             {
@@ -140,9 +119,16 @@ class LatentDiffusionLitModule(LightningModule):
                 "dataset_idx": MeanMetric(),
             }
         )
-        self.val_metrics = ModuleDict(
-            {
-                "mp20": ModuleDict(
+        # evaluator objects for computing metrics
+        self.val_generation_evaluators = {}
+        self.val_metrics = ModuleDict()
+        if self.hparams.datasets.mp20.proportion>0:
+            self.val_generation_evaluators['mp20'] = CrystalGenerationEvaluator(
+            dataset_cif_list=pd.read_csv(
+                os.path.join(self.hparams.sampling.data_dir, f"mp_20/raw/all.csv")
+            )["cif"].tolist()
+            )
+            self.val_metrics['mp20'] = ModuleDict(
                     {
                         "loss": MeanMetric(),
                         "x_loss": MeanMetric(),
@@ -158,8 +144,16 @@ class LatentDiffusionLitModule(LightningModule):
                         "novel_rate": MeanMetric(),
                         "sampling_time": MeanMetric(),
                     }
+                )
+
+        if self.hparams.datasets.qm9.proportion>0:
+            self.val_generation_evaluators['qm9'] = MoleculeGenerationEvaluator(
+                dataset_smiles_list=torch.load(
+                    os.path.join(self.hparams.sampling.data_dir, f"qm9/smiles.pt"),
                 ),
-                "qm9": ModuleDict(
+                removeHs=self.hparams.sampling.removeHs,
+            )
+            self.val_metrics['qm9'] = ModuleDict(
                     {
                         "loss": MeanMetric(),
                         "x_loss": MeanMetric(),
@@ -183,8 +177,11 @@ class LatentDiffusionLitModule(LightningModule):
                         "internal_energy": MeanMetric(),
                         "sampling_time": MeanMetric(),
                     }
-                ),
-                "qmof150": ModuleDict(
+                )
+
+        if self.hparams.datasets.qmof150.proportion>0:
+            self.val_generation_evaluators['qmof150'] = MOFGenerationEvaluator()
+            self.val_metrics['qmof150'] = ModuleDict(
                     {
                         "loss": MeanMetric(),
                         "x_loss": MeanMetric(),
@@ -215,9 +212,9 @@ class LatentDiffusionLitModule(LightningModule):
                         "all_checks": MeanMetric(),
                         "sampling_time": MeanMetric(),
                     }
-                ),
-            }
-        )
+                )
+
+        self.test_generation_evaluators = copy.deepcopy(self.val_generation_evaluators)
         self.test_metrics = copy.deepcopy(self.val_metrics)
 
         # load bincounts for sampling
@@ -255,6 +252,17 @@ class LatentDiffusionLitModule(LightningModule):
             "qm9": None,
             "qmof150": None,
         }
+        self.init_idx_to_dataset()
+
+    def init_idx_to_dataset(self, ):
+        datasets = [
+            ("mp20", self.hparams.datasets.mp20.proportion),
+            ("qm9", self.hparams.datasets.qm9.proportion),
+            ("qmof150", self.hparams.datasets.qmof150.proportion)
+        ]
+        filtered_datasets = [name for name, prop in datasets if prop > 0]
+        self.IDX_TO_DATASET = {idx: name for idx, name in enumerate(filtered_datasets)}
+
 
     def forward(self, batch: Data, sample_posterior: bool = True):
         # Encode batch to latent space
@@ -436,7 +444,7 @@ class LatentDiffusionLitModule(LightningModule):
     def on_validation_epoch_start(self) -> None:
         self.on_evaluation_epoch_start(stage="val")
 
-    def validation_step(self, batch: Data, batch_idx: int, dataloader_idx: int) -> None:
+    def validation_step(self, batch: Data, batch_idx: int, dataloader_idx: int = 0) -> None:
         self.evaluation_step(batch, batch_idx, dataloader_idx, stage="val")
 
     def on_validation_epoch_end(self) -> None:
@@ -447,7 +455,7 @@ class LatentDiffusionLitModule(LightningModule):
     def on_test_epoch_start(self) -> None:
         self.on_evaluation_epoch_start(stage="test")
 
-    def test_step(self, batch: Data, batch_idx: int, dataloader_idx: int) -> None:
+    def test_step(self, batch: Data, batch_idx: int, dataloader_idx: int = 0) -> None:
         self.evaluation_step(batch, batch_idx, dataloader_idx, stage="test")
 
     def on_test_epoch_end(self) -> None:
@@ -478,9 +486,9 @@ class LatentDiffusionLitModule(LightningModule):
 
         if stage not in ["val", "test"]:
             raise ValueError("stage must be 'val' or 'test'.")
-        metrics = getattr(self, f"{stage}_metrics")[IDX_TO_DATASET[dataloader_idx]]
+        metrics = getattr(self, f"{stage}_metrics")[self.IDX_TO_DATASET[dataloader_idx]]
         generation_evaluator = getattr(self, f"{stage}_generation_evaluators")[
-            IDX_TO_DATASET[dataloader_idx]
+            self.IDX_TO_DATASET[dataloader_idx]
         ]
         generation_evaluator.device = metrics["loss"].device
 
@@ -494,7 +502,7 @@ class LatentDiffusionLitModule(LightningModule):
         for k, v in loss_dict.items():
             metrics[k](v)
             self.log(
-                f"{stage}_{IDX_TO_DATASET[dataloader_idx]}/{k}",
+                f"{stage}_{self.IDX_TO_DATASET[dataloader_idx]}/{k}",
                 metrics[k],
                 on_step=False,
                 on_epoch=True,

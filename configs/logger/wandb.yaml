@@ -11,7 +11,7 @@ wandb:
   project: "all-atom-diffusion-transformer"
   log_model: False # upload lightning ckpts
   prefix: "" # a string to put at the beginning of metric keys
-  entity: "chaitjo" # set to name of your wandb user/team
+  entity: "" # set to name of your wandb user/team
   group: ""
   tags: "${tags}"
   job_type: ""
