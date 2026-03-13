@@ -1,6 +1,6 @@
 ase==3.23.0
 attr==0.3.2
-CairoSVG==2.7.1
+CairoSVG==2.9.0
 download==0.3.5
 e3nn==0.5.1
 importlib_resources==6.4.0
